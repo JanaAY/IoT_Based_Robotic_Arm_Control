@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Robotic Arm Control</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 200vh;
+      margin: 0;
+    }
+
+    #sideImage {
+        height: 100vh; 
+        margin-right: 30px;
+    }
+
+    .container { 
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 30px;
+    }
+
+    .status {
+        text-align: center;
+    }
+
+    #statusText{
+        display: flex;
+        justify-content: center;
+        margin-bottom: 5px;
+        color: black;
+    }
+
+    .control-panel{
+        margin-bottom: 20px;
+    }
+
+    .control-panel label {
+      display: block;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .slider-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    button {
+      padding: 10px;
+      margin: 5px;
+      background-color: grey;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 120px;
+    }
+
+    .on {
+      background-color: red;
+    }
+
+    .on_2 {
+      background-color: black;
+    }
+
+    .on_3 {
+      background-color: grey;
+    }
+
+    .off {
+      background-color: green;
+    }
+
+    .off_2 {
+      background-color: red;
+    }
+
+    .off_3 {
+      background-color: blue;
+    }
+
+    .reset{
+        background-color: orange;
+    }
+
+    span{
+        color: darkgreen;
+        font-weight: bold;
+    }
+
+    span#status{
+        color: black;
+    }
+
+    p{
+        text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        flex-direction: column;
+        justify-content: center;
+        height: auto;
+        width: auto;
+      }
+
+      h1 {
+        margin: 40px;
+        font-size: 50px;
+      }
+
+      .buttons{
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      button {
+        width: 50%;
+        font-size: 20px;
+      }
+
+      .control-panel {
+        margin-bottom: 40px;
+      }
+
+      .slider-container {
+        display: flex;
+        justify-content: center;
+      }
+
+      input[type="range"] {
+        width: 50%;
+    }
+
+      #sideImage {
+        max-height: 100vh;
+      }
+
+      span{
+        font-size: 20px ;
+      }
+
+      label{
+        font-size: 20px ;
+      }
+
+      .status{
+        text-align: center;
+        margin-bottom: 30px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+    <div class="image-container">
+        <img src="robotic_arm.png" alt="Robot Arm" id="sideImage">
+      </div>
+
+  <div class="container">
+    <h1>ESP32 Robotic Arm Control</h1>
+    <div class="status">
+        <span id="statusText">Disconnected</span>
+        <button id="connectBtn" class="off">Connect</button>
+    </div>
+    
+    <div class="control-panel">
+        <!-- Grip Control -->
+        <label for="gripControl">Gripper</label>
+        <div class="slider-container">
+          <input type="range" id="gripControl" min="0" max="100" value="0">
+          <span id="gripValue">0</span><span>%</span>
+        </div>
+
+        <label for="gripRotatorControl">Gripper Rotator</label>
+        <div class="slider-container">
+          <input type="range" id="gripRotatorControl" min="0" max="180">
+          <span id="gripRotatorValue">90</span><span>°</span>
+        </div>
+      
+        <!-- Wrist Roll Control -->
+        <label for="wristRollControl">Wrist</label>
+        <div class="slider-container">
+          <input type="range" id="wristRollControl" min="0" max="180">
+          <span id="wristRollValue">90</span><span>°</span>
+        </div>
+      
+        <!-- Elbow Control -->
+        <label for="elbowControl">Elbow</label>
+        <div class="slider-container">
+          <input type="range" id="elbowControl" min="0" max="180">
+          <span id="elbowValue">90</span><span>°</span>
+        </div>
+      
+        <!-- Shoulder Control -->
+        <label for="shoulderControl">Shoulder</label>
+        <div class="slider-container">
+          <input type="range" id="shoulderControl" min="0" max="180">
+          <span id="shoulderValue">90</span><span>°</span>
+        </div>
+      
+        <!-- Waist Control -->
+        <label for="waistControl">Waist</label>
+        <div class="slider-container">
+          <input type="range" id="waistControl" min="0" max="180">
+          <span id="waistValue">90</span><span>°</span>
+        </div>
+      </div>
+      
+
+    <div class="buttons">
+      <button id="recordBtn" class="off_2">⏺ Record</button>
+      <button id="playPauseBtn" class="off_3">▶ Play</button>
+      <button id="resetBtn" class="reset">Reset</button>
+    </div>
+
+  </div>
+
+  <script>
+    // Connection and disconnection handlers
+    let isConnected = false;
+
+    document.getElementById('connectBtn').addEventListener('click', function() {
+    const button = document.getElementById('connectBtn');
+    const statusText = document.getElementById('statusText');
+
+    if (isConnected) {
+        // If connected, disconnect
+        button.textContent = 'Connect';
+        statusText.textContent = 'Disconnected';
+        isConnected = false;
+        button.classList.remove('on');
+        button.classList.add('off');
+        
+    } else {
+        // If disconnected, connect
+        button.textContent = 'Disconnect';
+        statusText.textContent = 'Connected';
+        isConnected = true;
+        button.classList.remove('off');
+        button.classList.add('on');
+    }
+    });
+
+    // Update slider value display
+    function updateSliderValue(sliderId, valueId) {
+      const slider = document.getElementById(sliderId);
+      const valueSpan = document.getElementById(valueId);
+      valueSpan.textContent = slider.value;
+    }
+
+    // Event listeners for sliders
+    document.getElementById('gripControl').addEventListener('input', function() {
+      updateSliderValue('gripControl', 'gripValue');
+    });
+
+    document.getElementById('gripRotatorControl').addEventListener('input', function() {
+      updateSliderValue('gripRotatorControl', 'gripRotatorValue');
+    });
+
+    document.getElementById('wristRollControl').addEventListener('input', function() {
+      updateSliderValue('wristRollControl', 'wristRollValue');
+    });
+
+    document.getElementById('elbowControl').addEventListener('input', function() {
+      updateSliderValue('elbowControl', 'elbowValue');
+    });
+
+    document.getElementById('shoulderControl').addEventListener('input', function() {
+      updateSliderValue('shoulderControl', 'shoulderValue');
+    });
+
+    document.getElementById('waistControl').addEventListener('input', function() {
+      updateSliderValue('waistControl', 'waistValue');
+    });
+
+    // Record button toggle
+    let isRecording = false;
+    document.getElementById('recordBtn').addEventListener('click', function() {
+      isRecording = !isRecording;
+      const recordButton = document.getElementById('recordBtn');
+      if (isRecording) {
+        recordButton.textContent = "⏹ Stop";
+        recordButton.classList.remove('off_2');
+        recordButton.classList.add('on_2');
+      } else {
+        recordButton.textContent = "⏺ Record";
+        recordButton.classList.remove('on_2');
+        recordButton.classList.add('off_2');
+        // Reset all sliders to 90
+        document.getElementById('gripControl').value = 0;
+        document.getElementById('gripRotatorControl').value = 90;
+        document.getElementById('wristRollControl').value = 90;
+        document.getElementById('elbowControl').value = 90;
+        document.getElementById('shoulderControl').value = 90;
+        document.getElementById('waistControl').value = 90;
+
+        // Update the displayed values for sliders
+        updateSliderValue('gripControl', 'gripValue');
+        updateSliderValue('gripRotatorControl', 'gripRotatorValue');
+        updateSliderValue('wristRollControl', 'wristRollValue');
+        updateSliderValue('elbowControl', 'elbowValue');
+        updateSliderValue('shoulderControl', 'shoulderValue');
+        updateSliderValue('waistControl', 'waistValue');
+      }
+    });
+
+    // Play/Pause button functionality
+    let isPlaying = false;
+    document.getElementById('playPauseBtn').addEventListener('click', function() {
+      isPlaying = !isPlaying;
+      const playPauseButton = document.getElementById('playPauseBtn');
+      if (isPlaying) {
+        playPauseButton.textContent = "⏸ Pause";
+        playPauseButton.classList.remove('off_3');
+        playPauseButton.classList.add('on_3');
+        console.log("Playing recorded positions");
+      } else {
+        playPauseButton.textContent = "▶ Play";
+        playPauseButton.classList.remove('on_3');
+        playPauseButton.classList.add('off_3');
+        console.log("Paused playing positions");
+      }
+    });
+
+    // Reset button functionality
+    document.getElementById('resetBtn').addEventListener('click', function() {
+    // Reset all sliders to 90
+    document.getElementById('gripControl').value = 0;
+    document.getElementById('gripRotatorControl').value = 90;
+    document.getElementById('wristRollControl').value = 90;
+    document.getElementById('elbowControl').value = 90;
+    document.getElementById('shoulderControl').value = 90;
+    document.getElementById('waistControl').value = 90;
+
+    // Update the displayed values for sliders
+    updateSliderValue('gripControl', 'gripValue');
+    updateSliderValue('gripRotatorControl', 'gripRotatorValue');
+    updateSliderValue('wristRollControl', 'wristRollValue');
+    updateSliderValue('elbowControl', 'elbowValue');
+    updateSliderValue('shoulderControl', 'shoulderValue');
+    updateSliderValue('waistControl', 'waistValue');
+
+      // Reset the record and play buttons
+      isRecording = false;
+      document.getElementById('recordBtn').textContent = "Record";
+      document.getElementById('recordBtn').classList.remove('on_2');
+      document.getElementById('recordBtn').classList.add('off_2');
+
+      isPlaying = false;
+      document.getElementById('playPauseBtn').textContent = "Play";
+      document.getElementById('playPauseBtn').classList.remove('on_3');
+      document.getElementById('playPauseBtn').classList.add('off_3');
+    });
+
+  </script>
+
+</body>
+</html>
