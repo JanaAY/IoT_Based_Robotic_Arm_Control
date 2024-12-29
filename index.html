@@ -177,57 +177,52 @@
   </style>
 </head>
 <body>
-    <div class="image-container">
-        <img src="robotic_arm.png" alt="Robot Arm" id="sideImage">
-      </div>
+  <div class="image-container">
+      <img src="robotic_arm.png" alt="Robot Arm" id="sideImage">
+    </div>
 
   <div class="container">
     <h1>ESP32 Robotic Arm Control</h1>
-    <div class="status">
-        <span id="statusText">Disconnected</span>
-        <button id="connectBtn" class="off">Connect</button>
-    </div>
-    
     <div class="control-panel">
-        <!-- Grip Control -->
+        <!-- Gripper Control -->
         <label for="gripControl">Gripper</label>
         <div class="slider-container">
-          <input type="range" id="gripControl" min="0" max="100" value="0">
-          <span id="gripValue">0</span><span>%</span>
+          <input type="range" id="gripControl" min="15" max="60" value="0" value="60">
+          <span id="gripValue">60</span><span>°</span>
         </div>
 
         <label for="gripRotatorControl">Gripper Rotator</label>
         <div class="slider-container">
-          <input type="range" id="gripRotatorControl" min="0" max="180">
-          <span id="gripRotatorValue">90</span><span>°</span>
+          <input type="range" id="gripRotatorControl" min="20" max="90" value="60">
+          <span id="gripRotatorValue">60</span><span>°</span>
         </div>
       
         <!-- Wrist Roll Control -->
         <label for="wristRollControl">Wrist</label>
         <div class="slider-container">
-          <input type="range" id="wristRollControl" min="0" max="180">
-          <span id="wristRollValue">90</span><span>°</span>
+          <input type="range" id="wristRollControl" min="50" max="90" value="60">
+          <span id="wristRollValue">60</span><span>°</span>
         </div>
       
         <!-- Elbow Control -->
         <label for="elbowControl">Elbow</label>
         <div class="slider-container">
-          <input type="range" id="elbowControl" min="0" max="180">
-          <span id="elbowValue">90</span><span>°</span>
+          <input type="range" id="elbowControl" min="60" max="90" value="60">
+          <span id="elbowValue">60</span><span>°</span>
         </div>
       
         <!-- Shoulder Control -->
         <label for="shoulderControl">Shoulder</label>
         <div class="slider-container">
-          <input type="range" id="shoulderControl" min="0" max="180">
-          <span id="shoulderValue">90</span><span>°</span>
+          <input type="range" id="shoulderControl" min="0" max="90" value="60">
+          <span id="shoulderValue">60</span><span>°</span>
         </div>
       
-        <!-- Waist Control -->
-        <label for="waistControl">Waist</label>
+        <!-- Base Control -->
+        <label for="baseControl">Base</label>
         <div class="slider-container">
-          <input type="range" id="waistControl" min="0" max="180">
-          <span id="waistValue">90</span><span>°</span>
+          <input type="range" id="baseControl" min="0" max="180" value="60">
+          <span id="baseValue">60</span><span>°</span>
         </div>
       </div>
       
@@ -241,83 +236,26 @@
   </div>
 
   <script>
-    // Connection and disconnection handlers
     let isConnected = false;
-
-    document.getElementById('connectBtn').addEventListener('click', function() {
-    const button = document.getElementById('connectBtn');
-    const statusText = document.getElementById('statusText');
-
-    if (isConnected) {
-        // If connected, disconnect
-        button.textContent = 'Connect';
-        statusText.textContent = 'Disconnected';
-        isConnected = false;
-        button.classList.remove('on');
-        button.classList.add('off');
-        
-    } else {
-        // If disconnected, connect
-        button.textContent = 'Disconnect';
-        statusText.textContent = 'Connected';
-        isConnected = true;
-        button.classList.remove('off');
-        button.classList.add('on');
-    }
-    });
-
-    // Update slider value display
-    function updateSliderValue(sliderId, valueId) {
-      const slider = document.getElementById(sliderId);
-      const valueSpan = document.getElementById(valueId);
-      valueSpan.textContent = slider.value;
-    }
-
-    // Event listeners for sliders
-    document.getElementById('gripControl').addEventListener('input', function() {
-      updateSliderValue('gripControl', 'gripValue');
-    });
-
-    document.getElementById('gripRotatorControl').addEventListener('input', function() {
-      updateSliderValue('gripRotatorControl', 'gripRotatorValue');
-    });
-
-    document.getElementById('wristRollControl').addEventListener('input', function() {
-      updateSliderValue('wristRollControl', 'wristRollValue');
-    });
-
-    document.getElementById('elbowControl').addEventListener('input', function() {
-      updateSliderValue('elbowControl', 'elbowValue');
-    });
-
-    document.getElementById('shoulderControl').addEventListener('input', function() {
-      updateSliderValue('shoulderControl', 'shoulderValue');
-    });
-
-    document.getElementById('waistControl').addEventListener('input', function() {
-      updateSliderValue('waistControl', 'waistValue');
-    });
-
-    // Record button toggle
     let isRecording = false;
-    document.getElementById('recordBtn').addEventListener('click', function() {
-      isRecording = !isRecording;
-      const recordButton = document.getElementById('recordBtn');
-      if (isRecording) {
-        recordButton.textContent = "⏹ Stop";
-        recordButton.classList.remove('off_2');
-        recordButton.classList.add('on_2');
-      } else {
-        recordButton.textContent = "⏺ Record";
-        recordButton.classList.remove('on_2');
-        recordButton.classList.add('off_2');
-        // Reset all sliders to 90
+    let isPlaying = false;
+
+    // Function to update slider values
+    function updateSliderValue(sliderId, valueId) {
+        const slider = document.getElementById(sliderId);
+        const valueSpan = document.getElementById(valueId);
+        valueSpan.textContent = slider.value;
+    }
+
+    // Function to reset controls
+    function resetControls() {
+        // Reset all sliders to their default values
         document.getElementById('gripControl').value = 0;
         document.getElementById('gripRotatorControl').value = 90;
         document.getElementById('wristRollControl').value = 90;
         document.getElementById('elbowControl').value = 90;
         document.getElementById('shoulderControl').value = 90;
-        document.getElementById('waistControl').value = 90;
+        document.getElementById('baseControl').value = 90;
 
         // Update the displayed values for sliders
         updateSliderValue('gripControl', 'gripValue');
@@ -325,57 +263,121 @@
         updateSliderValue('wristRollControl', 'wristRollValue');
         updateSliderValue('elbowControl', 'elbowValue');
         updateSliderValue('shoulderControl', 'shoulderValue');
-        updateSliderValue('waistControl', 'waistValue');
-      }
-    });
+        updateSliderValue('baseControl', 'baseValue');
 
-    // Play/Pause button functionality
-    let isPlaying = false;
-    document.getElementById('playPauseBtn').addEventListener('click', function() {
-      isPlaying = !isPlaying;
-      const playPauseButton = document.getElementById('playPauseBtn');
-      if (isPlaying) {
-        playPauseButton.textContent = "⏸ Pause";
-        playPauseButton.classList.remove('off_3');
-        playPauseButton.classList.add('on_3');
-        console.log("Playing recorded positions");
-      } else {
-        playPauseButton.textContent = "▶ Play";
-        playPauseButton.classList.remove('on_3');
-        playPauseButton.classList.add('off_3');
-        console.log("Paused playing positions");
-      }
-    });
+        // Reset button states
+        resetButtonStates();
 
-    // Reset button functionality
-    document.getElementById('resetBtn').addEventListener('click', function() {
-    // Reset all sliders to 90
-    document.getElementById('gripControl').value = 0;
-    document.getElementById('gripRotatorControl').value = 90;
-    document.getElementById('wristRollControl').value = 90;
-    document.getElementById('elbowControl').value = 90;
-    document.getElementById('shoulderControl').value = 90;
-    document.getElementById('waistControl').value = 90;
+        // Send reset action to the server
+        sendHttpRequest({ action: 'reset' });
+    }
 
-    // Update the displayed values for sliders
+    // Function to reset button states
+    function resetButtonStates() {
+        isRecording = false;
+        document.getElementById('recordBtn').textContent = "⏺ Record";
+        document.getElementById('recordBtn').classList.remove('on_2');
+        document.getElementById('recordBtn').classList.add('off_2');
+
+        isPlaying = false;
+        document.getElementById('playPauseBtn').textContent = "▶ Play";
+        document.getElementById('playPauseBtn').classList.remove('on_3');
+        document.getElementById('playPauseBtn').classList.add('off_3');
+    }
+
+    // Function to handle recording
+    function toggleRecord() {
+        isRecording = !isRecording;
+        const recordButton = document.getElementById('recordBtn');
+        if (isRecording) {
+            recordButton.textContent = "⏹ Stop";
+            recordButton.classList.remove('off_2');
+            recordButton.classList.add('on_2');
+            sendHttpRequest({ action: 'record', state: 'start' });
+        } else {
+            recordButton.textContent = "⏺ Record";
+            recordButton.classList.remove('on_2');
+            recordButton.classList.add('off_2');
+            sendHttpRequest({ action: 'record', state: 'stop' });
+            resetControls();
+        }
+    }
+
+    // Function to handle play/pause functionality
+    function togglePlayPause() {
+        isPlaying = !isPlaying;
+        const playPauseButton = document.getElementById('playPauseBtn');
+        if (isPlaying) {
+            playPauseButton.textContent = "⏸ Pause";
+            playPauseButton.classList.remove('off_3');
+            playPauseButton.classList.add('on_3');
+            sendHttpRequest({ action: 'play', state: 'start' });
+        } else {
+            playPauseButton.textContent = "▶ Play";
+            playPauseButton.classList.remove('on_3');
+            playPauseButton.classList.add('off_3');
+            sendHttpRequest({ action: 'play', state: 'stop' });
+        }
+    }
+
+    // Function to send HTTP POST requests
+    function sendHttpRequest(data) {
+    const serverUrl = "http://" + window.location.hostname + "/control";
+    fetch(serverUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(data),
+    })
+        .then((response) => {
+        if (!response.ok) {
+            console.error("HTTP Request failed:", response.statusText);
+        }
+        return response.text();
+        })
+        .then((responseText) => {
+        console.log("Server Response:", responseText);
+        })
+        .catch((error) => {
+        console.error("Error:", error);
+        });
+    }
+
+
+
+    // Initialize HTTP control
+    function initHttpControl() {
+        document.getElementById('resetBtn').addEventListener('click', resetControls);
+        document.getElementById('recordBtn').addEventListener('click', toggleRecord);
+        document.getElementById('playPauseBtn').addEventListener('click', togglePlayPause);
+            // Add event listeners for sliders
+    document.getElementById('gripControl').addEventListener('input', function () {
     updateSliderValue('gripControl', 'gripValue');
-    updateSliderValue('gripRotatorControl', 'gripRotatorValue');
-    updateSliderValue('wristRollControl', 'wristRollValue');
-    updateSliderValue('elbowControl', 'elbowValue');
-    updateSliderValue('shoulderControl', 'shoulderValue');
-    updateSliderValue('waistControl', 'waistValue');
-
-      // Reset the record and play buttons
-      isRecording = false;
-      document.getElementById('recordBtn').textContent = "Record";
-      document.getElementById('recordBtn').classList.remove('on_2');
-      document.getElementById('recordBtn').classList.add('off_2');
-
-      isPlaying = false;
-      document.getElementById('playPauseBtn').textContent = "Play";
-      document.getElementById('playPauseBtn').classList.remove('on_3');
-      document.getElementById('playPauseBtn').classList.add('off_3');
+    sendHttpRequest({ servo: 'Gripper', angle: this.value });
     });
+    document.getElementById('gripRotatorControl').addEventListener('input', function () {
+    updateSliderValue('gripRotatorControl', 'gripRotatorValue');
+    sendHttpRequest({ servo: 'GripperRotator', angle: this.value });
+    });
+    document.getElementById('wristRollControl').addEventListener('input', function () {
+    updateSliderValue('wristRollControl', 'wristRollValue');
+    sendHttpRequest({ servo: 'Wrist', angle: this.value });
+    });
+    document.getElementById('elbowControl').addEventListener('input', function () {
+    updateSliderValue('elbowControl', 'elbowValue');
+    sendHttpRequest({ servo: 'Elbow', angle: this.value });
+    });
+    document.getElementById('shoulderControl').addEventListener('input', function () {
+    updateSliderValue('shoulderControl', 'shoulderValue');
+    sendHttpRequest({ servo: 'Shoulder', angle: this.value });
+    });
+    document.getElementById('baseControl').addEventListener('input', function () {
+    updateSliderValue('baseControl', 'baseValue');
+    sendHttpRequest({ servo: 'Base', angle: this.value });
+    });
+    }
+
+    // Initialize the controls when the webpage loads
+    window.onload = initHttpControl;
 
   </script>
 
